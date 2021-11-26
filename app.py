@@ -1,4 +1,3 @@
-from email import message
 import os
 from pickle import TRUE
 import sys
@@ -180,7 +179,7 @@ class ChatPage(GridLayout):
     
     def incoming_message(self, username, message):
         self.history.update_chat_history(
-            f'[color=20dd20]{chat_app.connect_page.username.text}[/color] > {message}'
+            f'[color=20dd20]{username}[/color] > {message}'
         )
 
 
