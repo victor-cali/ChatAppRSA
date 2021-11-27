@@ -1,3 +1,4 @@
+import time
 import os
 import sys
 import kivy
@@ -114,15 +115,17 @@ class ChatPage(GridLayout):
         self.new_message = TextInput(width = Window.size[0] * 0.8, size_hint_x = None, multiline = False)
         self.send = Button(text = 'Send')
         self.send.bind(on_press = self.send_message)
+        socket_client.start_listening(self.incoming_message, show_error)
         
-        # create a dropdown
+        time.sleep(2)
+
         self.dropdown = DropDown()
-        for i in range(3):
-            btn = Button(text=f'Value {i}', size_hint_y=None, height = self.send.height)
+        for name in self.users_online:
+            btn = Button(text=f'{name}', size_hint_y=None, height = self.send.height)
             btn.bind(on_release=lambda btn: self.dropdown.select(btn.text))
             self.dropdown.add_widget(btn)
         self.users_list_btn = Button(size_hint=(None, None))
-        self.users_list_btn.bind(on_release=self.on_user_select)
+        self.users_list_btn.bind(on_release=self.dropdown.open)
         self.dropdown.bind(on_select=lambda instance, x: setattr(self.users_list_btn, 'text', x))
 
         bottom_line = GridLayout(cols = 3)
@@ -134,7 +137,6 @@ class ChatPage(GridLayout):
         Window.bind(on_key_down = self.on_key_down)
         
         Clock.schedule_once(self.focus_text_input, 1)
-        socket_client.start_listening(self.incoming_message, show_error)
         self.bind(size = self.adjust_fields)
     
     def adjust_fields(self, *_):
@@ -155,29 +157,32 @@ class ChatPage(GridLayout):
         if keycode == 40:
             self.send_message(None)
     
-    def on_user_select(self):
-        self.dropdown.open()
-        pass
-    
     def send_message(self, _):
-        print(self.users_list_btn.text)
+        print(self.users_list_btn.text) # Value, future user
         message = self.new_message.text
-        print(self.new_message.text)
+        print(self.new_message.text) # New message
         self.new_message.text = ''
         if message:
             self.history.update_chat_history(
                 f'[color=dd2020]{chat_app.connect_page.username.text}[/color] > {message}'
             )
-            socket_client.send(message)
+            user_key_pair = {
+                'user': self.users_list_btn.text,
+                'key': self.users_online[self.users_list_btn.text]
+            }
+            socket_client.send(message, user_key_pair)
             Clock.schedule_once(self.focus_text_input, 0.1)
     
     def focus_text_input(self, _):
         self.new_message.focus = True
     
     def incoming_message(self, username, message):
-        self.history.update_chat_history(
-            f'[color=20dd20]{username}[/color] > {message}'
-        )
+        if username == '__flag__':
+            self.users_online = eval(message) 
+        else:
+            self.history.update_chat_history(
+                f'[color=20dd20]{username}[/color] > {message}'
+            )
 
 class ChatAppRSA(App):
 
@@ -199,13 +204,12 @@ class ChatAppRSA(App):
         screen.add_widget(self.chat_page)
         self.screen_manager.add_widget(screen)
 
-
-
 def show_error(message):
     chat_app.info_page.update_info(message)
     chat_app.screen_manager.current = 'Info'
     Clock.schedule_once(sys.exit, 10)
 
 if __name__ == '__main__':
+    private_key = None
     chat_app = ChatAppRSA()
     chat_app.run()

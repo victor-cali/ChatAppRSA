@@ -82,13 +82,4 @@ def generar_llaves():
     phi_n = (p - 1) * (q - 1)
     e = generar_e(phi_n)
     d = generar_d(e, phi_n)
-    return [n, e], [n, d]
-    
-'''
-public_key, private_key = generar_llaves()
-mensaje = input("Mensaje: ")
-mensaje_cifrado = cifrar(mensaje, public_key)
-print("Mensaje cifrado: "+ str(mensaje_cifrado))
-mensaje_descifrado = descifrar(mensaje_cifrado, private_key)
-print("Mensaje descifrado: "+ str(mensaje_descifrado))
-'''
+    return (n, e), (n, d)
