@@ -1,7 +1,7 @@
 import socket
 import select
 
-HEADER_LENGTH = 10
+HEADER_LENGTH = 128
 
 IP = socket.gethostbyname(socket.gethostname())
 PORT = 1234
@@ -29,6 +29,9 @@ sockets_list = [server_socket]
 # List of connected clients - socket as a key, user header and name as data
 clients = {}
 
+# List of public keys - socket as a key, user header and name as data
+keys = {}
+
 print(f'Listening for connections on {IP}:{PORT}...')
 
 # Handles message receiving
@@ -46,8 +49,22 @@ def receive_message(client_socket):
         # Convert header to int value
         message_length = int(message_header.decode('utf-8').strip())
 
+        # Get message
+        message = client_socket.recv(message_length).decode('utf-8')
+        if ':>>>:' in message:
+            message = message.split(':>>>:')
+            message = {
+                'header': message_header,
+                'data': message[0].encode('utf-8'),
+                'addressee': message[1]
+            }
+        else:
+            message = {
+                'header': message_header,
+                'data': message.encode('utf-8')
+            }
         # Return an object of message header and message data
-        return {'header': message_header, 'data': client_socket.recv(message_length)}
+        return message
 
     except:
 
@@ -56,6 +73,20 @@ def receive_message(client_socket):
         # socket.close() also invokes socket.shutdown(socket.SHUT_RDWR) what sends information about closing the socket (shutdown read/write)
         # and that's also a cause when we receive an empty message
         return False
+
+def update_users_status():
+    
+    for client_socket in clients:
+        others_keys = {}
+        for key in keys.keys():
+            if clients[client_socket]['data'] != key:
+                others_keys[key.decode("utf-8")] = keys[key]
+        message = repr(others_keys).encode('utf-8')
+        message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+        flag = '__flag__'.encode('utf-8')
+        flag_header = f"{len(flag):<{HEADER_LENGTH}}".encode('utf-8')
+        #print(message_header + message)
+        client_socket.send(flag_header + flag + message_header + message)
 
 while True:
 
@@ -82,12 +113,22 @@ while True:
             # The other returned object is ip/port set
             client_socket, client_address = server_socket.accept()
 
-            # Client should send his name right away, receive it
+            # Client should send their name right away, receive it
             user = receive_message(client_socket)
 
             # If False - client disconnected before he sent his name
             if user is False:
                 continue
+
+            # Client should send their public key right away, receive it
+            public_key = receive_message(client_socket)
+
+            # If False - client disconnected before he sent his name
+            if public_key is False:
+                continue
+
+            public_key = eval(public_key['data'])
+            #print(f'PUBLIC KEY: {public_key}')
 
             # Add accepted socket to select.select() list
             sockets_list.append(client_socket)
@@ -95,7 +136,13 @@ while True:
             # Also save username and username header
             clients[client_socket] = user
 
+            # Also save public key and username
+            keys[user['data']] = public_key
+            
+            update_users_status()
+
             print('Accepted new connection from {}:{}, username: {}'.format(*client_address, user['data'].decode('utf-8')))
+            #print('\n', list(clients.values()))
 
         # Else existing socket is sending a message
         else:
@@ -107,24 +154,29 @@ while True:
             if message is False:
                 print('Closed connection from: {}'.format(clients[notified_socket]['data'].decode('utf-8')))
 
+                # Remove from list for public key
+                keys.pop(clients[notified_socket]['data'])
+
                 # Remove from list for socket.socket()
                 sockets_list.remove(notified_socket)
 
                 # Remove from our list of users
                 del clients[notified_socket]
 
+                update_users_status()
+
                 continue
 
             # Get user by notified socket, so we will know who sent the message
             user = clients[notified_socket]
 
-            print(f'Received message from {user["data"].decode("utf-8")}: {message["data"].decode("utf-8")}')
+
+            print(f'Received message from {user["data"].decode("utf-8")}')
 
             # Iterate over connected clients and broadcast message
             for client_socket in clients:
-
                 # But don't sent it to sender
-                if client_socket != notified_socket:
+                if clients[client_socket]['data'] == message['addressee'].encode('utf-8'):
 
                     # Send user and message (both with their headers)
                     # We are reusing here message header sent by sender, and saved username header send by user when he connected
