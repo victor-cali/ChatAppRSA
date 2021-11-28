@@ -158,9 +158,7 @@ class ChatPage(GridLayout):
             self.send_message(None)
     
     def send_message(self, _):
-        print(self.users_list_btn.text) # Value, future user
         message = self.new_message.text
-        print(self.new_message.text) # New message
         self.new_message.text = ''
         if message:
             self.history.update_chat_history(

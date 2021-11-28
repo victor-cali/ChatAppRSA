@@ -125,7 +125,6 @@ while True:
 
             # If False - client disconnected before he sent his name
             if public_key is False:
-                print("NO PRIVATE KEY")
                 continue
 
             public_key = eval(public_key['data'])
@@ -172,12 +171,10 @@ while True:
             user = clients[notified_socket]
 
 
-            print(f'Received message from {user["data"].decode("utf-8")}: {message["data"].decode("utf-8")}')
+            print(f'Received message from {user["data"].decode("utf-8")}')
 
             # Iterate over connected clients and broadcast message
             for client_socket in clients:
-                print(clients[client_socket]['data'],message['addressee'].encode('utf-8'))
-
                 # But don't sent it to sender
                 if clients[client_socket]['data'] == message['addressee'].encode('utf-8'):
 

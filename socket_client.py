@@ -40,8 +40,10 @@ def connect(ip, port, my_username, error_callback):
 
 # Sends a message to the server
 def send(message,user):
+    print(f'\nMessage text: \n{message}\n')
     # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
     cipher = rsa.cifrar(message, user['key'])
+    print(f'\nCipher text: \n{cipher}\n')
     message = (cipher + ':>>>:' +  user['user']).encode('utf-8')
     message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
 
@@ -82,9 +84,9 @@ def listen(incoming_message_callback, error_callback):
                 
                 if username != '__flag__':
                     cipher = client_socket.recv(message_length).decode('utf-8')
-                    print(f'Cipher text: {cipher}')
+                    print(f'\nCipher text: \n{cipher}\n')
                     message = rsa.descifrar(cipher, my_private_key)
-                    print(f'Deciphered text: {cipher}')
+                    print(f'\nDeciphered text: \n{message}\n')
                 else: 
                     message = client_socket.recv(message_length).decode('utf-8')
 
